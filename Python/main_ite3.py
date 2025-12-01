@@ -4,8 +4,8 @@ from src.preprocessing import preprocess
 from src.feature_extraction import extract_features
 from src.feature_selection_ite2 import select_features
 from src.classification import train_classifier
-from Python.src.visualization import visualize_results
-from Python.src.report import generate_report
+from src.visualization import visualize_results
+from src.report import generate_report
 from src.utils_ite2 import save_cache, load_cache
 import os
 import sys
