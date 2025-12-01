@@ -1,5 +1,5 @@
 import config
-from src.data_loader import load_all_training_data
+from src.data_loader_ite2 import load_all_training_data
 from src.preprocessing import preprocess
 from src.feature_extraction import extract_features
 from src.feature_selection_ite2 import select_features
