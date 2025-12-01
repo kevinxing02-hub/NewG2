@@ -2,72 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import xml.etree.ElementTree as ET
-from sklearn.preprocessing import StandardScaler
-
-# newly added function in ite3 by Kevin 12.01.2025
-def _apply_scaler_to_features(features, scaler):
-    """Robustly apply or reconstruct scaler. Returns scaled features."""
-    if scaler is None:
-        print("DEBUG: no scaler provided, returning features unchanged")
-        return features
-
-    # sklearn-like object
-    if hasattr(scaler, "transform") and callable(scaler.transform):
-        return scaler.transform(features)
-
-    # dict-like with mean/scale
-    if isinstance(scaler, dict):
-        mean = scaler.get("mean") or scaler.get("mean_")
-        scale = scaler.get("scale") or scaler.get("scale_")
-        if mean is not None and scale is not None:
-            mean = np.asarray(mean)
-            scale = np.asarray(scale)
-            return (features - mean) / scale
-        maybe = scaler.get("scaler")
-        if maybe and hasattr(maybe, "transform"):
-            return maybe.transform(features)
-
-    # numpy array: try both interpretations
-    if isinstance(scaler, np.ndarray):
-        arr = scaler
-        if arr.ndim == 1 and arr.shape[0] == features.shape[1]:
-            # Try treat as scale (divide)
-            try:
-                scaled = features / arr
-                if np.isfinite(scaled).all() and np.abs(scaled).mean() < 1e6:
-                    print("DEBUG: treated ndarray scaler as scale (dividing).")
-                    return scaled
-            except Exception:
-                pass
-            # Fallback: treat as mean (subtract)
-            try:
-                scaled = features - arr
-                print("DEBUG: treated ndarray scaler as mean (subtracting).")
-                return scaled
-            except Exception:
-                pass
-
-    # Last resort: attempt to build StandardScaler if keys available in some container
-    try:
-        # If scaler is a tuple/list like (mean, scale)
-        if isinstance(scaler, (tuple, list)) and len(scaler) == 2:
-            mean = np.asarray(scaler[0])
-            scale = np.asarray(scaler[1])
-            ss = StandardScaler()
-            ss.mean_ = mean
-            ss.scale_ = scale
-            ss.var_ = ss.scale_ ** 2
-            ss.n_features_in_ = mean.shape[0]
-            return ss.transform(features)
-    except Exception:
-        pass
-
-    print("WARNING: Unrecognized scaler type in visualization; proceeding without scaling.")
-    print(f"  scaler type: {type(scaler)}, repr preview: {repr(scaler)[:300]}")
-    return features
-
-
-
 
 # Try to import MNE for EDF reading (more lenient than pyedflib)
 try:
@@ -477,67 +411,14 @@ def plot_hypnogram(xml_path, edf_path=None):
         import traceback
         traceback.print_exc()
 
-# newly added during ite3
-def visualize_results(model, features, labels, config, scaler=None, loso_aggregated=None):
-    """
-    Visualize results.
 
-    Args:
-        model: trained classifier with predict() (and predict_proba optionally).
-        features: ndarray shape (n_samples, n_features).
-        labels: ndarray shape (n_samples,)
-        config: config object
-        scaler: fitted scaler object or other saved scaler representation (optional)
-        loso_aggregated: optional aggregated LOSO results (not required)
-    """
+def visualize_results(model, scaler, features, labels, config):
     print("Visualizing results...")
     class_names = ['Wake', 'N1', 'N2', 'N3', 'REM']
 
-    # Debug introspection of scaler
-    try:
-        print("DEBUG: scaler type:", type(scaler))
-        if isinstance(scaler, np.ndarray):
-            print("DEBUG: scaler ndarray shape:", scaler.shape, "preview:", np.ravel(scaler)[:10])
-        elif isinstance(scaler, dict):
-            print("DEBUG: scaler dict keys:", list(scaler.keys()))
-        elif scaler is None:
-            print("DEBUG: scaler is None")
-        elif hasattr(scaler, "__dict__"):
-            print("DEBUG: scaler attrs:", [k for k in dir(scaler) if not k.startswith('_')][:30])
-    except Exception as e:
-        print("DEBUG: failed to introspect scaler:", e)
+    # SCALE features before inference
+    features_scaled = scaler.transform(features)
 
-    # SCALE features before inference (robust)
-    features_scaled = _apply_scaler_to_features(features, scaler)
+    y_pred = model.predict(features_scaled)
 
-    # Ensure shapes OK
-    if features_scaled.shape[0] != labels.shape[0]:
-        print(f"WARNING: features ({features_scaled.shape[0]}) and labels ({labels.shape[0]}) length mismatch")
-
-    # Predict
-    try:
-        y_pred = model.predict(features_scaled)
-    except Exception as e:
-        print("Error: model.predict failed:", e)
-        import traceback
-        traceback.print_exc()
-        return
-
-    # Plot confusion matrix
     plot_confusion_matrix(labels, y_pred, class_names)
-
-    # Optionally show basic metrics
-    try:
-        from sklearn.metrics import classification_report
-        print("\nClassification report:")
-        print(classification_report(labels, y_pred, target_names=class_names, zero_division=0))
-    except Exception:
-        pass
-
-    # Optionally, plot additional LOSO aggregated results if provided
-    if loso_aggregated is not None:
-        try:
-            print("\nLOSO aggregated results (summary):")
-            print(loso_aggregated)
-        except Exception:
-            pass

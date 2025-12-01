@@ -220,16 +220,32 @@ def main():
     # 6. Visualization
     print("\n=== STEP 6: VISUALIZATION ===")
     if model is not None:
+        print("DEBUG: scaler type:", type(scaler))
+        try:
+            # show small summary for numpy arrays and dicts
+            if isinstance(scaler, np.ndarray):
+                print("DEBUG: scaler ndarray shape:", scaler.shape, "first elems:", scaler.ravel()[:10])
+            elif isinstance(scaler, dict):
+                print("DEBUG: scaler dict keys:", list(scaler.keys()))
+            elif hasattr(scaler, "__dict__"):
+                print("DEBUG: scaler attrs:", [k for k in dir(scaler) if not k.startswith("_")][:20])
+        except Exception as e:
+            print("DEBUG: failed to introspect scaler:", e)
+
+
         visualize_results(
-            model,
-            selected_features,  # features
-            labels,  # labels
-            config,  # config-modulen
-            scaler=scaler,  # bara används i iter 2, ok att skicka med
+            model=model,
+            features=selected_features,
+            labels=labels,
+            config=config,
+            scaler=scaler,
             loso_aggregated=None
         )
+
+
     else:
         print("Skipping visualization - no trained model")
+        
 
     # 7. Report Generation
     print("\n=== STEP 7: PROCESSING LOG & REPORT GENERATION ===")

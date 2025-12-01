@@ -242,6 +242,12 @@ Report generated automatically from pipeline results.
 """
 
     # Write to report.txt
+    '''
     with open("report.txt", "w") as f:
+        f.write(report_content)
+    print("Report saved to report.txt")
+    '''
+
+    with open("report.txt", "w", encoding="utf-8") as f:
         f.write(report_content)
     print("Report saved to report.txt")
