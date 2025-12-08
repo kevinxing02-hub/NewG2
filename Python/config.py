@@ -9,7 +9,7 @@ USE_CACHE = False  # Temporarily disabled for testing with real data
 
 # -- File Paths --
 import os
-DATA_DIR = './'
+DATA_DIR = 'S:/SignalGoupWork/'
 TRAINING_DIR = f'{DATA_DIR}TrainData'
 HOLDOUT_DIR = f'{DATA_DIR}TestFeature'
 SAMPLE_DIR = f'{DATA_DIR}sample/'
